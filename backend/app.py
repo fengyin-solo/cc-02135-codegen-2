@@ -4,7 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 from config import PORT
 from database import init_db
-from routes import auth_bp, files_bp
+from routes import auth_bp, files_bp, audit_bp
 
 # 配置日志
 logging.basicConfig(
@@ -18,6 +18,7 @@ CORS(app)
 # 注册蓝图
 app.register_blueprint(auth_bp)
 app.register_blueprint(files_bp)
+app.register_blueprint(audit_bp)
 
 # 初始化数据库
 init_db()

@@ -65,6 +65,40 @@ body::after {
     padding: 60px 24px;
 }
 
+/* 顶部导航 */
+.top-nav {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.audit-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--glass);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.25s ease;
+}
+
+.audit-nav-link:hover {
+    color: var(--text-primary);
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18);
+}
+
+.audit-nav-link svg {
+    color: var(--accent);
+}
+
 /* 头部标题 */
 h1 {
     text-align: center;

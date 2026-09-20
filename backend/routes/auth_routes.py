@@ -4,6 +4,7 @@ import logging
 from flask import request, jsonify
 from routes import auth_bp
 from auth import rate_limit, generate_token, refresh_token as do_refresh_token, authenticate_user
+from audit import record_audit, ACTION_AUTH, RESULT_SUCCESS, RESULT_FAILURE
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,19 @@ def authenticate():
     if authenticate_user(username, password):
         token = generate_token(username)
         logger.info(f"用户认证成功: {username}")
+        record_audit(
+            ACTION_AUTH, RESULT_SUCCESS, actor=username,
+            object_type='session', object_name=username,
+            detail={'event': 'login', 'token_type': 'bearer'}
+        )
         return jsonify({'success': True, 'token': token})
 
     logger.warning(f"用户认证失败: {username}")
+    record_audit(
+        ACTION_AUTH, RESULT_FAILURE, actor=username,
+        object_type='session', object_name=username,
+        detail={'event': 'login', 'reason': 'invalid_credentials'}
+    )
     time.sleep(0.5)
     return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
 

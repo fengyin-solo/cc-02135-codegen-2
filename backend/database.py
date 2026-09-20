@@ -56,6 +56,26 @@ def init_db():
         )
     ''')
 
+    # 传输审计与操作留痕：文件接收、取件、授权、删除、导出均落表归档
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            actor_type TEXT NOT NULL DEFAULT 'guest',
+            actor TEXT,
+            actor_ip TEXT,
+            object_type TEXT,
+            object_id TEXT,
+            object_name TEXT,
+            result TEXT NOT NULL,
+            detail TEXT,
+            occurred_at TIMESTAMP NOT NULL DEFAULT (datetime('now', 'localtime'))
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_occurred ON audit_logs(id DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor)')
+
     default_users = [
         ('admin', hashlib.sha256('admin123'.encode()).hexdigest()),
         ('user', hashlib.sha256('user123'.encode()).hexdigest()),

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>传输审计与操作留痕 - CloudVault</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="audit.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+    <div class="container audit-container">
+        <!-- 顶部导航 -->
+        <div class="audit-topbar">
+            <a href="index.html" class="back-link">← 返回文件传输</a>
+            <div id="userBar" class="user-bar hidden">
+                <span class="user-info">
+                    <span class="user-avatar" id="userAvatar">A</span>
+                    <span id="currentUser">未登录</span>
+                    <button class="logout-btn" onclick="logout()" title="退出登录">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </span>
+            </div>
+        </div>
+
+        <h1>传输审计</h1>
+        <p class="subtitle">文件接收 · 取件 · 授权 · 删除 全链路操作留痕</p>
+
+        <!-- 未登录提示 -->
+        <div id="loginRequired" class="login-required" style="display:none;">
+            <div class="login-required-icon">🔒</div>
+            <h2>需要登录后查看审计记录</h2>
+            <p>审计数据与登录身份联通，请先验证身份。</p>
+            <form id="auditLoginForm" class="audit-login-form">
+                <input type="text" id="loginUsername" placeholder="用户名" required autocomplete="username">
+                <input type="password" id="loginPassword" placeholder="密码" required autocomplete="current-password">
+                <button type="submit" class="btn-primary audit-login-btn">验证身份</button>
+                <div id="loginError" class="error-msg"></div>
+            </form>
+            <p class="login-hint">测试账号：admin / admin123</p>
+        </div>
+
+        <!-- 审计面板 -->
+        <div id="auditPanel" style="display:none;">
+            <!-- 筛选工具栏 -->
+            <div class="audit-toolbar">
+                <div class="filter-group">
+                    <label>动作</label>
+                    <select id="filterAction">
+                        <option value="">全部动作</option>
+                        <option value="upload">文件接收</option>
+                        <option value="download">文件取件</option>
+                        <option value="share_download">分享取件</option>
+                        <option value="auth">身份授权</option>
+                        <option value="share_create">创建分享</option>
+                        <option value="share_delete">删除分享</option>
+                        <option value="audit_export">审计导出</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>结果</label>
+                    <select id="filterResult">
+                        <option value="">全部结果</option>
+                        <option value="success">成功</option>
+                        <option value="failure">失败</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-search">
+                    <label>检索</label>
+                    <input type="text" id="filterKeyword" placeholder="文件名 / 对象ID / 操作者 / 详情">
+                </div>
+                <button class="btn-secondary filter-btn" onclick="applyFilters()">查询</button>
+                <button class="btn-secondary filter-btn" onclick="resetFilters()">重置</button>
+            </div>
+
+            <!-- 选择与导出栏 -->
+            <div class="selection-bar">
+                <label class="select-all-wrap">
+                    <input type="checkbox" id="selectAllPage" onchange="toggleSelectPage(this.checked)">
+                    <span>本页全选</span>
+                </label>
+                <span class="selection-count">已选 <strong id="selectedCount">0</strong> 条（跨页保留）</span>
+                <div class="export-controls">
+                    <select id="exportFormat">
+                        <option value="csv">CSV（.csv，Excel 可打开）</option>
+                        <option value="json">JSON（.json）</option>
+                    </select>
+                    <button class="export-btn" id="exportBtn" onclick="exportSelected()">
+                        ⬇️ 导出所选审计记录
+                    </button>
+                    <button class="btn-secondary clear-sel-btn" onclick="clearSelection()">清空选择</button>
+                </div>
+            </div>
+
+            <!-- 状态消息条：失败原因说明，且操作后保留当前选择 -->
+            <div id="auditNotice" class="audit-notice" style="display:none;"></div>
+
+            <!-- 审计记录表 -->
+            <div class="audit-table-wrap">
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th class="col-check"></th>
+                            <th class="col-id">#</th>
+                            <th class="col-action">动作</th>
+                            <th class="col-actor">操作者</th>
+                            <th class="col-object">操作对象</th>
+                            <th class="col-result">结果</th>
+                            <th class="col-detail">详情</th>
+                            <th class="col-time">操作时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody"></tbody>
+                </table>
+
+                <div id="auditEmpty" class="audit-empty" style="display:none;">
+                    <div class="audit-empty-icon">📭</div>
+                    <p class="audit-empty-title">暂无审计记录</p>
+                    <p class="audit-empty-hint">文件接收、取件、授权、删除等操作会在此自动留痕</p>
+                </div>
+
+                <div id="auditLoading" class="audit-loading" style="display:none;">
+                    <div class="spinner"></div>
+                    <p>正在加载审计记录...</p>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <div class="audit-pagination">
+                <button class="page-btn" id="prevPage" onclick="changePage(-1)">上一页</button>
+                <span class="page-info">
+                    第 <strong id="currentPage">1</strong> 页 / 共 <strong id="totalPages">1</strong> 页
+                    · 总计 <strong id="totalCount">0</strong> 条
+                </span>
+                <button class="page-btn" id="nextPage" onclick="changePage(1)">下一页</button>
+            </div>
+        </div>
+
+        <!-- 加载动画遮罩（导出中） -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loader">
+                <div class="spinner"></div>
+                <p id="loadingText">处理中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="audit.js"></script>
+</body>
+</html>
