@@ -56,6 +56,32 @@ def init_db():
         )
     ''')
 
+    # 审计留痕表：只追加，不修改、不删除，保证历史顺序与总数稳定
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            result TEXT NOT NULL,
+            operator TEXT,
+            object_type TEXT,
+            object_id TEXT,
+            object_name TEXT,
+            detail TEXT,
+            reason TEXT,
+            ip TEXT,
+            created_at TEXT NOT NULL,
+            created_ts REAL NOT NULL
+        )
+    ''')
+    cursor.execute(
+        'CREATE INDEX IF NOT EXISTS idx_audit_logs_created '
+        'ON audit_logs (created_ts DESC, id DESC)'
+    )
+    cursor.execute(
+        'CREATE INDEX IF NOT EXISTS idx_audit_logs_action '
+        'ON audit_logs (action)'
+    )
+
     default_users = [
         ('admin', hashlib.sha256('admin123'.encode()).hexdigest()),
         ('user', hashlib.sha256('user123'.encode()).hexdigest()),

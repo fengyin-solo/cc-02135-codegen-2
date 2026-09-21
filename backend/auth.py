@@ -34,6 +34,14 @@ def rate_limit(f):
     def decorated_function(*args, **kwargs):
         identifier = request.remote_addr
         if not check_rate_limit(identifier):
+            # 限流本身属于授权链路的拒绝事件，需要留痕
+            from audit import record_audit, ACTION_AUTH
+            action = ACTION_AUTH if (request.path or '').startswith('/api/auth') else None
+            record_audit(
+                action or 'auth', 'fail',
+                object_type='auth', object_name='账号登录',
+                reason='触发速率限制（请求过于频繁）'
+            )
             return jsonify({'error': '请求过于频繁，请稍后再试'}), 429
         return f(*args, **kwargs)
     return decorated_function
